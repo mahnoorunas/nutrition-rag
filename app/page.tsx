@@ -1,339 +1,85 @@
 "use client";
 
-import { useState } from "react";
 import { motion } from "framer-motion";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
-
-export default function Home() {
-
-  const [question, setQuestion] = useState("");
-  const [answer, setAnswer] = useState("");
-  const [loading, setLoading] = useState(false);
-
-
-  async function askQuestion() {
-
-    if (!question.trim()) return;
-
-    setLoading(true);
-    setAnswer("");
-
-    const response = await fetch("/api/chat", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        question,
-      }),
-    });
-
-
-    const data = await response.json();
-
-    setAnswer(data.answer);
-
-    setLoading(false);
-  }
-
-
-
+export default function LandingPage() {
   return (
-
-    <main className="
-      min-h-screen
-      bg-[#0f172a]
-      flex
-      items-center
-      justify-center
-      p-6
-      overflow-hidden
-      relative
-    ">
-
-
-      {/* floating cute bubbles */}
+    <main className="min-h-screen bg-[#0f172a] flex flex-col items-center justify-center p-6 relative overflow-hidden">
+      {/* Background glow */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-purple-600/10 rounded-full blur-[120px] pointer-events-none" />
 
       <motion.div
-        animate={{
-          y:[0,-20,0]
-        }}
-        transition={{
-          duration:4,
-          repeat:Infinity
-        }}
-        className="
-        absolute
-        top-20
-        left-20
-        text-5xl
-        "
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8 }}
+        className="relative z-10 text-center max-w-2xl"
       >
-        🌙
-      </motion.div>
-
-
-
-      <motion.div
-        animate={{
-          y:[0,20,0]
-        }}
-        transition={{
-          duration:3,
-          repeat:Infinity
-        }}
-        className="
-        absolute
-        bottom-20
-        right-20
-        text-5xl
-        "
-      >
-        🥑
-      </motion.div>
-
-
-
-
-      <motion.div
-
-        initial={{
-          opacity:0,
-          scale:0.8
-        }}
-
-        animate={{
-          opacity:1,
-          scale:1
-        }}
-
-        transition={{
-          duration:0.6
-        }}
-
-        className="
-        w-full
-        max-w-3xl
-        bg-[#111827]/80
-        backdrop-blur-xl
-        border
-        border-purple-500/20
-        shadow-2xl
-        shadow-purple-900/40
-        rounded-[2rem]
-        p-8
-        "
-
-      >
-
-
-        <motion.h1
-
-        animate={{
-          y:[0,-5,0]
-        }}
-
-        transition={{
-          duration:2,
-          repeat:Infinity
-        }}
-
-        className="
-        text-4xl
-        font-bold
-        text-center
-        bg-gradient-to-r
-        from-pink-400
-        via-purple-400
-        to-blue-400
-        bg-clip-text
-        text-transparent
-        "
-
+        {/* Logo */}
+        <motion.div
+          animate={{ y: [0, -10, 0] }}
+          transition={{ duration: 4, repeat: Infinity }}
+          className="text-7xl mb-6"
         >
+          🥑
+        </motion.div>
 
-          🥗 NutriBuddy AI
+        <h1 className="text-5xl md:text-6xl font-bold text-white mb-4 tracking-tight">
+          NutriBuddy
+        </h1>
 
-        </motion.h1>
-
-
-
-        <p className="
-        text-center
-        text-gray-400
-        mt-3
-        mb-8
-        ">
-          Your cute little nutrition companion ✨
+        <p className="text-xl text-gray-400 mb-3">
+          Your personal AI nutrition companion
         </p>
 
+        <p className="text-sm text-gray-500 mb-10 max-w-md mx-auto leading-relaxed">
+          Ask anything about nutrition, diets, vitamins, and healthy eating.
+          NutriBuddy searches through verified nutrition knowledge to give you
+          accurate, personalized answers.
+        </p>
 
+        {/* CTA Buttons */}
+        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+          <Link href="/register">
+            <Button className="rounded-2xl px-8 py-6 text-base bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-lg shadow-purple-500/25 transition hover:scale-105">
+              Get Started
+            </Button>
+          </Link>
 
+          <Link href="/login">
+            <Button
+              variant="outline"
+              className="rounded-2xl px-8 py-6 text-base border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white transition"
+            >
+              I already have an account
+            </Button>
+          </Link>
+        </div>
 
-        <textarea
-
-        value={question}
-
-        onChange={(e)=>setQuestion(e.target.value)}
-
-        placeholder="Ask me anything about nutrition... 💭"
-
-        className="
-        w-full
-        h-36
-        bg-[#1f2937]
-        text-white
-        placeholder-gray-500
-        rounded-3xl
-        p-5
-        border
-        border-gray-700
-        outline-none
-        focus:border-purple-400
-        focus:ring-4
-        focus:ring-purple-500/20
-        transition
-        resize-none
-        "
-
-        />
-
-
-
-
-
-        <motion.button
-
-        whileHover={{
-          scale:1.05
-        }}
-
-        whileTap={{
-          scale:0.95
-        }}
-
-        onClick={askQuestion}
-
-        className="
-        mt-5
-        w-full
-        py-4
-        rounded-3xl
-        bg-gradient-to-r
-        from-purple-500
-        via-pink-500
-        to-blue-500
-        text-white
-        font-semibold
-        shadow-lg
-        shadow-purple-500/30
-        "
-
-        >
-
-        {
-          loading
-          ? "🐾 Thinking..."
-          : "✨ Ask NutriBuddy"
-        }
-
-
-        </motion.button>
-
-
-
-
-
-
-        {
-          loading && (
-
-          <motion.div
-
-          animate={{
-            opacity:[0.3,1,0.3]
-          }}
-
-          transition={{
-            duration:1,
-            repeat:Infinity
-          }}
-
-          className="
-          text-center
-          text-purple-300
-          mt-6
-          "
-
-          >
-
-          🌸 Looking through my nutrition notes...
-
-          </motion.div>
-
-          )
-        }
-
-
-
-
-
-        {
-          answer && (
-
-          <motion.div
-
-          initial={{
-            opacity:0,
-            y:30
-          }}
-
-          animate={{
-            opacity:1,
-            y:0
-          }}
-
-          className="
-          mt-8
-          bg-[#1e293b]
-          rounded-3xl
-          p-6
-          border
-          border-purple-500/20
-          "
-
-          >
-
-
-          <h2 className="
-          text-xl
-          font-bold
-          text-pink-300
-          mb-3
-          ">
-            🤖 NutriBuddy says:
-          </h2>
-
-
-          <p className="
-          text-gray-300
-          leading-8
-          ">
-            {answer}
-          </p>
-
-
-          </motion.div>
-
-          )
-        }
-
-
-
+        {/* Features */}
+        <div className="mt-16 grid grid-cols-1 sm:grid-cols-3 gap-6 text-left">
+          {[
+            { icon: "🧠", title: "AI Powered", desc: "Smart answers from verified nutrition data" },
+            { icon: "⚡", title: "Instant", desc: "Real-time streaming responses" },
+            { icon: "🔒", title: "Private", desc: "Your conversations are secure" },
+          ].map((feature) => (
+            <div
+              key={feature.title}
+              className="rounded-2xl border border-gray-800 bg-[#111827]/60 p-5 backdrop-blur-sm"
+            >
+              <div className="text-2xl mb-2">{feature.icon}</div>
+              <h3 className="text-white font-semibold mb-1">{feature.title}</h3>
+              <p className="text-gray-500 text-sm">{feature.desc}</p>
+            </div>
+          ))}
+        </div>
       </motion.div>
 
-
+      {/* Footer */}
+      <p className="absolute bottom-6 text-gray-600 text-xs">
+        NutriBuddy © 2026
+      </p>
     </main>
-
   );
 }

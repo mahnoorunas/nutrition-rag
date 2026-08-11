@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { loadDocument } from "@/lib/loader";
 import { splitDocument } from "@/lib/chunk";
-import { getEmbedding } from "@/lib/embeddings";
+import { createEmbedding } from "@/lib/embeddings";
 import { index } from "@/lib/pinecone";
 
 export async function GET() {
@@ -22,7 +22,7 @@ export async function GET() {
 
       console.log(`Creating embedding ${i}`);
 
-      const embedding = await getEmbedding(
+      const embedding = await createEmbedding(
         chunk.pageContent
       );
 
