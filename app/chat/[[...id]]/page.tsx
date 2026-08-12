@@ -47,12 +47,13 @@ export default function ChatPage() {
    * Load conversation from URL on mount / direct nav
    * --------------------------------------------------
    */
-  useEffect(() => {
+   useEffect(() => {
     const id = params.id?.[0];
-    if (id && messages.length === 0 && !loadingConversation) {
+    // ONLY load if auth is ready — prevents 401 race condition
+    if (id && status === "authenticated" && messages.length === 0 && !loadingConversation) {
       loadConversation(id);
     }
-  }, [params.id]);
+  }, [params.id, status]);
 
   /*
    * --------------------------------------------------
@@ -110,7 +111,13 @@ export default function ChatPage() {
       const response = await fetch(`/api/conversations/${id}`);
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const text = await response.text();
+        let errorData: any = {};
+        try {
+          errorData = JSON.parse(text);
+        } catch {
+          errorData = { error: `HTTP ${response.status}: ${response.statusText}` };
+        }
         console.error("CONVERSATIONS API ERROR:", errorData);
         throw new Error(errorData.error || "Failed to load conversation");
       }
@@ -215,11 +222,12 @@ export default function ChatPage() {
       }
 
       const newConversationId = response.headers.get("x-conversation-id");
-      if (newConversationId && !conversationId) {
-        setConversationId(newConversationId);
-        router.push(`/chat/${newConversationId}`);
-        loadConversations();
-      }
+     if (newConversationId && !conversationId) {
+  setConversationId(newConversationId);
+  // Updates URL WITHOUT remounting the page
+  window.history.replaceState(null, "", `/chat/${newConversationId}`);
+  loadConversations();
+}
 
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
@@ -677,8 +685,8 @@ export default function ChatPage() {
                 ))}
 
                 {/* Thinking indicator */}
-                {loading && messages[messages.length - 1]?.role === "user" && (
-                  <div className="flex items-start gap-3">
+                    {loading && (                  
+                    <div className="flex items-start gap-3">
                     <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-pink-500/10">
                       🤖
                     </div>
