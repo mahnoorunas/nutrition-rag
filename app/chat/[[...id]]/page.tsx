@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { signIn, signOut, useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -25,6 +25,7 @@ type Conversation = {
 export default function ChatPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const params = useParams();
 
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
@@ -36,7 +37,22 @@ export default function ChatPage() {
   const [loadingConversations, setLoadingConversations] = useState(false);
   const [loadingConversation, setLoadingConversation] = useState(false);
 
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  /*
+   * --------------------------------------------------
+   * Load conversation from URL on mount / direct nav
+   * --------------------------------------------------
+   */
+  useEffect(() => {
+    const id = params.id?.[0];
+    if (id && messages.length === 0 && !loadingConversation) {
+      loadConversation(id);
+    }
+  }, [params.id]);
 
   /*
    * --------------------------------------------------
@@ -120,6 +136,35 @@ export default function ChatPage() {
     setConversationId(null);
     setMessages([]);
     setQuestion("");
+    router.push("/chat");
+  }
+
+  /*
+   * --------------------------------------------------
+   * Rename conversation
+   * --------------------------------------------------
+   */
+  async function renameConversation(id: string, newTitle: string) {
+    if (!newTitle.trim()) {
+      setEditingId(null);
+      return;
+    }
+    try {
+      const response = await fetch(`/api/conversations/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: newTitle.trim() }),
+      });
+      if (!response.ok) throw new Error("Failed to rename");
+
+      setConversations((prev) =>
+        prev.map((c) => (c.id === id ? { ...c, title: newTitle.trim() } : c))
+      );
+    } catch (error) {
+      console.error("Rename error:", error);
+    } finally {
+      setEditingId(null);
+    }
   }
 
   /*
@@ -172,6 +217,7 @@ export default function ChatPage() {
       const newConversationId = response.headers.get("x-conversation-id");
       if (newConversationId && !conversationId) {
         setConversationId(newConversationId);
+        router.push(`/chat/${newConversationId}`);
         loadConversations();
       }
 
@@ -279,7 +325,7 @@ export default function ChatPage() {
   }
 
   if (!session) {
-    return null; // Will redirect via useEffect
+    return null;
   }
 
   const displayName =
@@ -345,28 +391,66 @@ export default function ChatPage() {
                 {conversations.map((conversation) => (
                   <div
                     key={conversation.id}
-                    onClick={() => loadConversation(conversation.id)}
+                    onClick={() => {
+                      if (editingId === conversation.id) return;
+                      loadConversation(conversation.id);
+                      router.push(`/chat/${conversation.id}`);
+                    }}
                     className={`group flex cursor-pointer items-center gap-2 rounded-xl px-3 py-3 transition ${
-                      conversationId === conversation.id
+                      conversationId === conversation.id && editingId !== conversation.id
                         ? "bg-purple-500/15 text-white"
                         : "text-gray-400 hover:bg-gray-800/70 hover:text-gray-200"
                     }`}
                   >
                     <span className="shrink-0 text-sm">💬</span>
 
-                    <span className="min-w-0 flex-1 truncate text-xs">
-                      {conversation.title}
-                    </span>
+                    {editingId === conversation.id ? (
+                      <input
+                        autoFocus
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            renameConversation(conversation.id, editValue);
+                          }
+                          if (e.key === "Escape") {
+                            setEditingId(null);
+                          }
+                        }}
+                        onBlur={() => renameConversation(conversation.id, editValue)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="flex-1 min-w-0 bg-gray-800 text-white text-xs rounded px-2 py-1 outline-none border border-purple-500/50"
+                      />
+                    ) : (
+                      <span className="min-w-0 flex-1 truncate text-xs">
+                        {conversation.title}
+                      </span>
+                    )}
 
-                    <button
-                      onClick={(event) =>
-                        deleteConversation(conversation.id, event)
-                      }
-                      className="hidden shrink-0 text-xs text-gray-600 transition hover:text-red-400 group-hover:block"
-                      title="Delete conversation"
-                    >
-                      🗑️
-                    </button>
+                    {editingId !== conversation.id && (
+                      <div className="hidden shrink-0 items-center gap-1 group-hover:flex">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingId(conversation.id);
+                            setEditValue(conversation.title);
+                          }}
+                          className="text-xs text-gray-600 transition hover:text-purple-400"
+                          title="Rename"
+                        >
+                          ✏️
+                        </button>
+                        <button
+                          onClick={(event) =>
+                            deleteConversation(conversation.id, event)
+                          }
+                          className="text-xs text-gray-600 transition hover:text-red-400"
+                          title="Delete conversation"
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

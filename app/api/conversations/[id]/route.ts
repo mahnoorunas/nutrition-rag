@@ -24,8 +24,6 @@ export async function GET(
 
     const { id } = await params;
 
-    // Make sure this conversation belongs to the
-    // currently logged-in user.
     const { data: conversation, error: conversationError } =
       await supabase
         .from("conversations")
@@ -62,6 +60,56 @@ export async function GET(
     return NextResponse.json(
       {
         error: error?.message ?? "Failed to load conversation",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(
+  req: Request,
+  { params }: Params
+) {
+  try {
+    const session = await auth();
+
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const { id } = await params;
+    const { title } = await req.json();
+
+    if (!title?.trim()) {
+      return NextResponse.json(
+        { error: "Title is required" },
+        { status: 400 }
+      );
+    }
+
+    const { error } = await supabase
+      .from("conversations")
+      .update({
+        title: title.trim(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id)
+      .eq("user_id", session.user.id);
+
+    if (error) {
+      throw error;
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error("Rename conversation error:", error);
+
+    return NextResponse.json(
+      {
+        error: error?.message ?? "Failed to rename conversation",
       },
       { status: 500 }
     );
@@ -108,4 +156,3 @@ export async function DELETE(
     );
   }
 }
-
