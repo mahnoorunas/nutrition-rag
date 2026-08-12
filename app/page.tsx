@@ -1,29 +1,27 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 export default function LandingPage() {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   return (
     <main className="min-h-screen bg-[#0f172a] flex flex-col items-center justify-center p-6 relative overflow-hidden">
       {/* Background glow */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-purple-600/10 rounded-full blur-[120px] pointer-events-none" />
 
-      <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8 }}
-        className="relative z-10 text-center max-w-2xl"
+      <div
+        className={`relative z-10 text-center max-w-2xl transition-all duration-700 ${
+          mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+        }`}
       >
-        {/* Logo */}
-        <motion.div
-          animate={{ y: [0, -10, 0] }}
-          transition={{ duration: 4, repeat: Infinity }}
-          className="text-7xl mb-6"
-        >
-          🥑
-        </motion.div>
+        <div className="text-7xl mb-6">🥑</div>
 
         <h1 className="text-5xl md:text-6xl font-bold text-white mb-4 tracking-tight">
           NutriBuddy
@@ -39,7 +37,6 @@ export default function LandingPage() {
           accurate, personalized answers.
         </p>
 
-        {/* CTA Buttons */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
           <Link href="/register">
             <Button className="rounded-2xl px-8 py-6 text-base bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-lg shadow-purple-500/25 transition hover:scale-105">
@@ -57,7 +54,6 @@ export default function LandingPage() {
           </Link>
         </div>
 
-        {/* Features */}
         <div className="mt-16 grid grid-cols-1 sm:grid-cols-3 gap-6 text-left">
           {[
             { icon: "🧠", title: "AI Powered", desc: "Smart answers from verified nutrition data" },
@@ -74,9 +70,8 @@ export default function LandingPage() {
             </div>
           ))}
         </div>
-      </motion.div>
+      </div>
 
-      {/* Footer */}
       <p className="absolute bottom-6 text-gray-600 text-xs">
         NutriBuddy © 2026
       </p>
