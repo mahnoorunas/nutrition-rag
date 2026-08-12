@@ -41,16 +41,21 @@ export default function ChatPage() {
   const [editValue, setEditValue] = useState("");
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const justCreatedIdRef = useRef<string | null>(null);
 
   /*
    * --------------------------------------------------
    * Load conversation from URL on mount / direct nav
    * --------------------------------------------------
    */
-   useEffect(() => {
+  useEffect(() => {
     const id = params.id?.[0];
-    // ONLY load if auth is ready — prevents 401 race condition
-    if (id && status === "authenticated" && messages.length === 0 && !loadingConversation) {
+    if (
+      id &&
+      status === "authenticated" &&
+      id !== justCreatedIdRef.current &&
+      !loadingConversation
+    ) {
       loadConversation(id);
     }
   }, [params.id, status]);
@@ -116,10 +121,14 @@ export default function ChatPage() {
         try {
           errorData = JSON.parse(text);
         } catch {
-          errorData = { error: `HTTP ${response.status}: ${response.statusText}` };
+          errorData = {
+            error: `HTTP ${response.status}: ${response.statusText}`,
+          };
         }
         console.error("CONVERSATIONS API ERROR:", errorData);
-        throw new Error(errorData.error || "Failed to load conversation");
+        throw new Error(
+          errorData.error || "Failed to load conversation"
+        );
       }
 
       const data = await response.json();
@@ -143,6 +152,7 @@ export default function ChatPage() {
     setConversationId(null);
     setMessages([]);
     setQuestion("");
+    justCreatedIdRef.current = null;
     router.push("/chat");
   }
 
@@ -165,7 +175,9 @@ export default function ChatPage() {
       if (!response.ok) throw new Error("Failed to rename");
 
       setConversations((prev) =>
-        prev.map((c) => (c.id === id ? { ...c, title: newTitle.trim() } : c))
+        prev.map((c) =>
+          c.id === id ? { ...c, title: newTitle.trim() } : c
+        )
       );
     } catch (error) {
       console.error("Rename error:", error);
@@ -190,12 +202,7 @@ export default function ChatPage() {
       content: userQuestion,
     };
 
-    const assistantMessage: Message = {
-      role: "assistant",
-      content: "",
-    };
-
-    setMessages((prev) => [...prev, userMessage, assistantMessage]);
+    setMessages((prev) => [...prev, userMessage]);
     setLoading(true);
 
     try {
@@ -222,12 +229,16 @@ export default function ChatPage() {
       }
 
       const newConversationId = response.headers.get("x-conversation-id");
-     if (newConversationId && !conversationId) {
-  setConversationId(newConversationId);
-  // Updates URL WITHOUT remounting the page
-  window.history.replaceState(null, "", `/chat/${newConversationId}`);
-  loadConversations();
-}
+      if (newConversationId && !conversationId) {
+        setConversationId(newConversationId);
+        justCreatedIdRef.current = newConversationId;
+        window.history.replaceState(
+          null,
+          "",
+          `/chat/${newConversationId}`
+        );
+        loadConversations();
+      }
 
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
@@ -237,6 +248,7 @@ export default function ChatPage() {
       }
 
       let fullText = "";
+      let assistantAdded = false;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -245,29 +257,36 @@ export default function ChatPage() {
         const chunk = decoder.decode(value, { stream: true });
         fullText += chunk;
 
-        setMessages((prev) => {
-          const updated = [...prev];
-          updated[updated.length - 1] = {
-            ...updated[updated.length - 1],
-            content: fullText,
-          };
-          return updated;
-        });
+        if (!assistantAdded) {
+          assistantAdded = true;
+          setMessages((prev) => [
+            ...prev,
+            { role: "assistant", content: fullText },
+          ]);
+        } else {
+          setMessages((prev) => {
+            const updated = [...prev];
+            updated[updated.length - 1] = {
+              ...updated[updated.length - 1],
+              content: fullText,
+            };
+            return updated;
+          });
+        }
       }
     } catch (error: any) {
       console.error("Chat error:", error);
 
-      setMessages((prev) => {
-        const updated = [...prev];
-        updated[updated.length - 1] = {
-          ...updated[updated.length - 1],
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
           content:
             error instanceof Error
               ? error.message
               : "Something went wrong.",
-        };
-        return updated;
-      });
+        },
+      ]);
     } finally {
       setLoading(false);
     }
@@ -278,7 +297,10 @@ export default function ChatPage() {
    * Delete conversation
    * --------------------------------------------------
    */
-  async function deleteConversation(id: string, event: React.MouseEvent) {
+  async function deleteConversation(
+    id: string,
+    event: React.MouseEvent
+  ) {
     event.stopPropagation();
     const confirmed = window.confirm("Delete this conversation?");
     if (!confirmed) return;
@@ -306,7 +328,9 @@ export default function ChatPage() {
    * Keyboard handling
    * --------------------------------------------------
    */
-  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+  function handleKeyDown(
+    e: React.KeyboardEvent<HTMLTextAreaElement>
+  ) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       askQuestion();
@@ -357,7 +381,9 @@ export default function ChatPage() {
 
             <div>
               <h1 className="font-bold text-white">NutriBuddy</h1>
-              <p className="text-[11px] text-gray-500">Nutrition Assistant</p>
+              <p className="text-[11px] text-gray-500">
+                Nutrition Assistant
+              </p>
             </div>
           </div>
 
@@ -405,7 +431,8 @@ export default function ChatPage() {
                       router.push(`/chat/${conversation.id}`);
                     }}
                     className={`group flex cursor-pointer items-center gap-2 rounded-xl px-3 py-3 transition ${
-                      conversationId === conversation.id && editingId !== conversation.id
+                      conversationId === conversation.id &&
+                      editingId !== conversation.id
                         ? "bg-purple-500/15 text-white"
                         : "text-gray-400 hover:bg-gray-800/70 hover:text-gray-200"
                     }`}
@@ -419,13 +446,21 @@ export default function ChatPage() {
                         onChange={(e) => setEditValue(e.target.value)}
                         onKeyDown={(e) => {
                           if (e.key === "Enter") {
-                            renameConversation(conversation.id, editValue);
+                            renameConversation(
+                              conversation.id,
+                              editValue
+                            );
                           }
                           if (e.key === "Escape") {
                             setEditingId(null);
                           }
                         }}
-                        onBlur={() => renameConversation(conversation.id, editValue)}
+                        onBlur={() =>
+                          renameConversation(
+                            conversation.id,
+                            editValue
+                          )
+                        }
                         onClick={(e) => e.stopPropagation()}
                         className="flex-1 min-w-0 bg-gray-800 text-white text-xs rounded px-2 py-1 outline-none border border-purple-500/50"
                       />
@@ -450,7 +485,10 @@ export default function ChatPage() {
                         </button>
                         <button
                           onClick={(event) =>
-                            deleteConversation(conversation.id, event)
+                            deleteConversation(
+                              conversation.id,
+                              event
+                            )
                           }
                           className="text-xs text-gray-600 transition hover:text-red-400"
                           title="Delete conversation"
@@ -476,7 +514,9 @@ export default function ChatPage() {
                 <p className="truncate text-sm font-medium text-white">
                   {displayName}
                 </p>
-                <p className="text-[11px] text-gray-600">NutriBuddy user</p>
+                <p className="text-[11px] text-gray-600">
+                  NutriBuddy user
+                </p>
               </div>
 
               <button
@@ -502,7 +542,10 @@ export default function ChatPage() {
               <span className="font-bold text-white">NutriBuddy</span>
             </div>
 
-            <button onClick={() => signOut()} className="text-sm text-gray-400">
+            <button
+              onClick={() => signOut()}
+              className="text-sm text-gray-400"
+            >
               🚪
             </button>
           </header>
@@ -530,8 +573,8 @@ export default function ChatPage() {
                 </h2>
 
                 <p className="mt-2 max-w-md text-sm leading-6 text-gray-400">
-                  Ask me anything about nutrition and I'll search my nutrition
-                  knowledge for you.
+                  Ask me anything about nutrition and I'll search my
+                  nutrition knowledge for you.
                 </p>
 
                 <div className="mt-7 flex max-w-2xl flex-wrap justify-center gap-2">
@@ -566,7 +609,9 @@ export default function ChatPage() {
                   >
                     <div
                       className={`flex max-w-[85%] items-start gap-3 ${
-                        message.role === "user" ? "flex-row-reverse" : ""
+                        message.role === "user"
+                          ? "flex-row-reverse"
+                          : ""
                       }`}
                     >
                       <div
@@ -596,7 +641,9 @@ export default function ChatPage() {
                               remarkPlugins={[remarkGfm, remarkBreaks]}
                               components={{
                                 p: ({ children }) => (
-                                  <p className="mb-2 last:mb-0">{children}</p>
+                                  <p className="mb-2 last:mb-0">
+                                    {children}
+                                  </p>
                                 ),
                                 ul: ({ children }) => (
                                   <ul className="list-disc pl-4 mb-2 space-y-1">
@@ -609,7 +656,9 @@ export default function ChatPage() {
                                   </ol>
                                 ),
                                 li: ({ children }) => (
-                                  <li className="mb-0.5">{children}</li>
+                                  <li className="mb-0.5">
+                                    {children}
+                                  </li>
                                 ),
                                 strong: ({ children }) => (
                                   <strong className="font-bold text-white">
@@ -621,7 +670,10 @@ export default function ChatPage() {
                                     {children}
                                   </em>
                                 ),
-                                code: ({ className, children }) => {
+                                code: ({
+                                  className,
+                                  children,
+                                }) => {
                                   const isInline = !className;
                                   return isInline ? (
                                     <code className="bg-gray-800 px-1 py-0.5 rounded text-xs font-mono text-pink-300">
@@ -684,23 +736,28 @@ export default function ChatPage() {
                   </motion.div>
                 ))}
 
-                {/* Thinking indicator — only shows before first token arrives */}
-{loading && messages[messages.length - 1]?.role === "assistant" && messages[messages.length - 1]?.content === "" && (
-  <div className="flex items-start gap-3">
-    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-pink-500/10">
-      🤖
-    </div>
-    <div className="rounded-2xl border border-gray-700 bg-[#1e293b] px-5 py-3">
-      <motion.div
-        animate={{ opacity: [0.3, 1, 0.3] }}
-        transition={{ duration: 1, repeat: Infinity }}
-        className="text-gray-400"
-      >
-        Thinking...
-      </motion.div>
-    </div>
-  </div>
-)}
+                {/* Thinking indicator — only while loading and last message is from user */}
+                {loading &&
+                  messages[messages.length - 1]?.role ===
+                    "user" && (
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-pink-500/10">
+                        🤖
+                      </div>
+                      <div className="rounded-2xl border border-gray-700 bg-[#1e293b] px-5 py-3">
+                        <motion.div
+                          animate={{ opacity: [0.3, 1, 0.3] }}
+                          transition={{
+                            duration: 1,
+                            repeat: Infinity,
+                          }}
+                          className="text-gray-400"
+                        >
+                          Thinking...
+                        </motion.div>
+                      </div>
+                    </div>
+                  )}
 
                 <div ref={messagesEndRef} />
               </div>
