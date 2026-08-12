@@ -12,6 +12,7 @@ export default function RegisterPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -20,6 +21,18 @@ export default function RegisterPage() {
     event.preventDefault();
     setError(null);
     setSuccess(false);
+
+    // Validate confirm password
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters.");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -42,6 +55,7 @@ export default function RegisterPage() {
       setName("");
       setEmail("");
       setPassword("");
+      setConfirmPassword("");
       setTimeout(() => {
         router.push("/login");
       }, 1500);
@@ -108,6 +122,21 @@ export default function RegisterPage() {
               placeholder="Min. 6 characters"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
+              required
+              minLength={6}
+              className="w-full"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Confirm Password
+            </label>
+            <Input
+              type="password"
+              placeholder="Re-enter your password"
+              value={confirmPassword}
+              onChange={(event) => setConfirmPassword(event.target.value)}
               required
               minLength={6}
               className="w-full"
