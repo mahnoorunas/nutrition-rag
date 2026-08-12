@@ -684,24 +684,23 @@ export default function ChatPage() {
                   </motion.div>
                 ))}
 
-                {/* Thinking indicator */}
-                    {loading && (                  
-                    <div className="flex items-start gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-pink-500/10">
-                      🤖
-                    </div>
-
-                    <div className="rounded-2xl border border-gray-700 bg-[#1e293b] px-5 py-3">
-                      <motion.div
-                        animate={{ opacity: [0.3, 1, 0.3] }}
-                        transition={{ duration: 1, repeat: Infinity }}
-                        className="text-gray-400"
-                      >
-                        Thinking...
-                      </motion.div>
-                    </div>
-                  </div>
-                )}
+                {/* Thinking indicator — only shows before first token arrives */}
+{loading && messages[messages.length - 1]?.role === "assistant" && messages[messages.length - 1]?.content === "" && (
+  <div className="flex items-start gap-3">
+    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-pink-500/10">
+      🤖
+    </div>
+    <div className="rounded-2xl border border-gray-700 bg-[#1e293b] px-5 py-3">
+      <motion.div
+        animate={{ opacity: [0.3, 1, 0.3] }}
+        transition={{ duration: 1, repeat: Infinity }}
+        className="text-gray-400"
+      >
+        Thinking...
+      </motion.div>
+    </div>
+  </div>
+)}
 
                 <div ref={messagesEndRef} />
               </div>
